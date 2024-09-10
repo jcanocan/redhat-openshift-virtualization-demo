@@ -71,5 +71,5 @@
                   user: cloud-user
               name: cloudinitdisk
         wait: true
-        wait_timeout: 600g
+        wait_timeout: 600
 
