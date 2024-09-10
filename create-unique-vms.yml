@@ -1,0 +1,75 @@
+---
+- name: Create VM
+  connection: local
+  gather_facts: false
+  hosts: localhost
+  vars:
+    vm_base_name: "testvm"
+    counter_file: "/tmp/vm_counter.txt"
+
+  pre_tasks:
+    - name: Ensure counter file exists
+      copy:
+        content: "0"
+        dest: "{{ counter_file }}"
+        mode: '0644'
+      changed_when: false
+
+    - name: Read current count
+      shell: cat {{ counter_file }}
+      register: current_count
+      changed_when: false
+
+  tasks:
+    - name: Increment count
+      set_fact:
+        vm_name: "{{ vm_base_name }}-{{ current_count.stdout | int + 1 }}"
+        new_count: "{{ current_count.stdout | int + 1 }}"
+
+    - name: Write new count
+      copy:
+        content: "{{ new_count }}"
+        dest: "{{ counter_file }}"
+        mode: '0644'
+
+    - name: Create VM
+      redhat.openshift_virtualization.kubevirt_vm:
+        name: "{{ vm_name }}"
+        namespace: default
+        labels:
+          app: test
+        instancetype:
+          name: u1.small
+        preference:
+          name: centos.stream9
+        spec:
+          accessCredentials:
+            - sshPublicKey:
+                propagationMethod:
+                  noCloud: {}
+                source:
+                  secret:
+                    secretName: ssh-key
+          domain:
+            devices:
+              interfaces:
+                - name: default
+                  masquerade: {}
+          networks:
+            - name: default
+              pod: {}
+          volumes:
+            - containerDisk:
+                image: quay.io/containerdisks/centos-stream:9
+              name: containerdisk
+            - cloudInitNoCloud:
+                userData: |-
+                  #cloud-config
+                  chpasswrd:
+                    expire: false
+                  password: password
+                  user: cloud-user
+              name: cloudinitdisk
+        wait: true
+        wait_timeout: 600g
+
