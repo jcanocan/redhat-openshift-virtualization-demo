@@ -5,32 +5,16 @@
   hosts: localhost
   vars:
     vm_base_name: "testvm"
-    counter_file: "/tmp/vm_counter.txt"
-
-  pre_tasks:
-    - name: Ensure counter file exists
-      copy:
-        content: "0"
-        dest: "{{ counter_file }}"
-        mode: '0644'
-      changed_when: false
-
-    - name: Read current count
-      shell: cat {{ counter_file }}
-      register: current_count
-      changed_when: false
+    alphabet: "abcdefghijklmnopqrstuvwxyz"
 
   tasks:
-    - name: Increment count
+    - name: Generate random identifier
       set_fact:
-        vm_name: "{{ vm_base_name }}-{{ current_count.stdout | int + 1 }}"
-        new_count: "{{ current_count.stdout | int + 1 }}"
+        random_id: "{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}"
 
-    - name: Write new count
-      copy:
-        content: "{{ new_count }}"
-        dest: "{{ counter_file }}"
-        mode: '0644'
+    - name: Set VM name
+      set_fact:
+        vm_name: "{{ vm_base_name }}-{{ random_id }}"
 
     - name: Create VM
       redhat.openshift_virtualization.kubevirt_vm:
@@ -72,4 +56,3 @@
               name: cloudinitdisk
         wait: true
         wait_timeout: 600
-
