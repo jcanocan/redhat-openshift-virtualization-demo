@@ -5,12 +5,11 @@
   hosts: localhost
   vars:
     vm_base_name: "testvm"
-    alphabet: "abcdefghijklmnopqrstuvwxyz"
 
   tasks:
     - name: Generate random identifier
       set_fact:
-        random_id: "{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}{{ alphabet | list | random | join }}"
+        random_id: "{{ lookup('community.general.random_string', upper=false, numbers=false, special=false, length=4) }}"
 
     - name: Set VM name
       set_fact:
@@ -23,36 +22,46 @@
         labels:
           app: test
         instancetype:
-          name: u1.small
+          name: u1.medium
         preference:
-          name: centos.stream9
+          name: rhel.9
+        data_volume_templates:
+          - metadata:
+              name: "rhel-9-{{ vm_name }}-volume"
+            spec:
+              sourceRef:
+                kind: DataSource
+                name: rhel9
+                namespace: openshift-virtualization-os-images
+              storage:
+                resources: {}
         spec:
           accessCredentials:
             - sshPublicKey:
                 propagationMethod:
-                  noCloud: {}
+                  qemuGuestAgent:
+                    users:
+                      - cloud-user
                 source:
                   secret:
                     secretName: ssh-key
           domain:
-            devices:
-              interfaces:
-                - name: default
-                  masquerade: {}
-          networks:
-            - name: default
-              pod: {}
+            devices: {}
+            machine:
+              type: pc-q35-rhel9.4.0
           volumes:
-            - containerDisk:
-                image: quay.io/containerdisks/centos-stream:9
-              name: containerdisk
+            - dataVolume:
+                name: "rhel-9-{{ vm_name }}-volume"
+              name: rootdisk
             - cloudInitNoCloud:
                 userData: |-
                   #cloud-config
-                  chpasswrd:
+                  chpasswd:
                     expire: false
                   password: password
                   user: cloud-user
+                  runcmd:
+                  - [ setsebool, -P, virt_qemu_ga_manage_ssh, on ]
               name: cloudinitdisk
         wait: true
         wait_timeout: 600

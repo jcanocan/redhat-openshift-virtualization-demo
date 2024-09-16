@@ -37,7 +37,7 @@
             - cloudInitNoCloud:
                 userData: |-
                   #cloud-config
-                  chpasswrd:
+                  chpasswd:
                     expire: false
                   password: password
                   user: cloud-user

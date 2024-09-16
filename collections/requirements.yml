@@ -1,2 +1,3 @@
 collections:
   - name: redhat.openshift_virtualization
+  - name: community.general
